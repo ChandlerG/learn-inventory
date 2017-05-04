@@ -30,8 +30,11 @@ public final class AceInventoryManager implements InventoryManager {
         {
         	int onHand = database.onHand(item);
         	int toOrder = item.wantOnHand() - onHand;
+        	if (toOrder > 0)
+        	{
         	final Order order = new Order(item, toOrder);
         	orders.add(order);
+        	}
         }
         
         
