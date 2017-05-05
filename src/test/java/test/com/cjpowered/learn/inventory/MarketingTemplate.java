@@ -7,6 +7,13 @@ import com.cjpowered.learn.marketing.MarketingInfo;
 import com.cjpowered.learn.marketing.Season;
 
 public class MarketingTemplate implements MarketingInfo {
+	
+	final private int saleBuffer = 20;
+	
+	public int saleBuffer()
+	{
+		return saleBuffer;
+	}
 
     @Override
     public boolean onSale(final Item item) {
@@ -17,5 +24,7 @@ public class MarketingTemplate implements MarketingInfo {
     public Season season(final LocalDate when) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
+    
+    
 
 }

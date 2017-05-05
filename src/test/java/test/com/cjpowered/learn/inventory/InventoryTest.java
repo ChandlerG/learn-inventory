@@ -28,6 +28,12 @@ public class InventoryTest {
     public void whenNoStockItemsDoNotOrder() {
         // given
         final LocalDate today = LocalDate.now();
+        MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	};
         final InventoryDatabase db = new DatabaseTemplate(){
         	@Override
         	public List<Item> stockItems()
@@ -35,7 +41,8 @@ public class InventoryTest {
         		return Collections.EMPTY_LIST;
         	}
         };
-        final InventoryManager im = new AceInventoryManager(db);
+        
+        final InventoryManager im = new AceInventoryManager(db, mt);
 
         // when
         final List<Order> actual = im.getOrders(today);
@@ -51,7 +58,13 @@ public class InventoryTest {
     	//given
     	int onHand = 10;
     	final int shouldHave = 16;
-    	
+    	MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	};
+    			
     	Item item = new StockedItem(shouldHave);
     	final InventoryDatabase db = new DatabaseTemplate() {
     		@Override
@@ -66,7 +79,7 @@ public class InventoryTest {
     		}
     	};
     	
-    	final InventoryManager im = new AceInventoryManager(db);
+    	final InventoryManager im = new AceInventoryManager(db, mt);
     	final LocalDate today = LocalDate.now();
     	
     	//when
@@ -87,7 +100,12 @@ public class InventoryTest {
     	//given
     	int onHand = 20;
     	final int shouldHave = 14;
-    	
+    	MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	};
     	
     	Item item = new StockedItem(shouldHave);
     	final InventoryDatabase db = new DatabaseTemplate() {
@@ -102,7 +120,8 @@ public class InventoryTest {
     			return Collections.singletonList(item);
     		}
     	};
-    	final InventoryManager im = new AceInventoryManager(db);
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	
     	final LocalDate today = LocalDate.now();
     	
     	//when 
@@ -120,7 +139,12 @@ public class InventoryTest {
     	//given
     	int onHand = 14;
     	final int shouldHave = 14;
-    	
+    	MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	};
     	
     	Item item = new StockedItem(shouldHave);
     	final InventoryDatabase db = new DatabaseTemplate() {
@@ -135,7 +159,7 @@ public class InventoryTest {
     			return Collections.singletonList(item);
     		}
     	};
-    	final InventoryManager im = new AceInventoryManager(db);
+    	final InventoryManager im = new AceInventoryManager(db, mt);
     	final LocalDate today = LocalDate.now();
     	
     	//when 
@@ -156,6 +180,12 @@ public class InventoryTest {
     	
     	int onHandItem2 = 13;
     	final int shouldHaveItem2 = 20;
+    	MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	};
     	
     	Item item1 = new StockedItem(shouldHaveItem1);
     	Item item2 = new StockedItem(shouldHaveItem2);
@@ -187,7 +217,7 @@ public class InventoryTest {
     			return myList;
     		}
     	};
-    	final InventoryManager im = new AceInventoryManager(db);
+    	final InventoryManager im = new AceInventoryManager(db, mt);
     	final LocalDate today = LocalDate.now();
     	
     	//when 
@@ -197,6 +227,69 @@ public class InventoryTest {
     	
     	assertEquals(1, actual.size());
     }
+    
+    
+    @Test
+    public void twoItemsOneOnSaleBothNeedStock()
+    {
+    	//given
+    	int onHandItem1 = 14;
+    	final int shouldHaveItem1 = 15;
+    	int onHandItem2 = 13;
+    	final int shouldHaveItem2 = 20;
+    	Item item1OnSale = new StockedItem(shouldHaveItem1);
+    	Item item2 = new StockedItem(shouldHaveItem2);
+    	MarketingTemplate mt = new MarketingTemplate()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        if (item.equals(item1OnSale))
+    	        	return true;
+    	        else
+    	        	return false;
+    	    }
+    	};
+    	final int saleBuffer = mt.saleBuffer();
+    	
+    	final InventoryDatabase db = new DatabaseTemplate() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onHandItem1;
+    			}
+    			else if (item.equals(item2))
+    			{
+    				return onHandItem2;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1OnSale);
+    			myList.add(item2);
+    			return myList;
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(2, actual.size());//both should have orders
+    	assertEquals(actual.get(0).quantity, shouldHaveItem1 + saleBuffer  - onHandItem1);//Iterator okay?? Do I need to specify more?
+    	assertEquals(actual.get(1).quantity, shouldHaveItem2 - onHandItem2);
+    }
+    
     
     
 
