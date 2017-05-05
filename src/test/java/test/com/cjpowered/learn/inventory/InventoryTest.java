@@ -290,6 +290,12 @@ public class InventoryTest {
     	assertEquals(actual.get(1).quantity, shouldHaveItem2 - onHandItem2);
     }
     
+    
+    
+    //this test passed without a red, just from changing the amount of stock. Should I... write the test
+    //before changing the number values? How would this fail?
+    //and how comprehensive do my tests need to be? Should I exhaust _every_ possibility for two items 
+    //in relation to 1 being in stock, 1 being on sale, etc?? That's quite a few possibilities
     @Test
     public void twoItemsOneOnSaleOnlyNonSaleNeedsStock()
     {
@@ -350,6 +356,8 @@ public class InventoryTest {
     	assertEquals(actual.get(0).quantity, shouldHaveItem2 - onHandItem2);
     	
     }
+ 
+    
     
 
 }
