@@ -10,11 +10,15 @@ public class MarketingTemplate implements MarketingInfo {
 	
 	final private int saleBuffer = 20;
 	
-	public int saleBuffer()
+	public int saleAmount(int onHand)
 	{
-		return saleBuffer;
+		return onHand + saleBuffer;
 	}
 
+	public int seasonalAmount(int onHand)
+	{
+		return onHand*2;//rule for seasons
+	}
     @Override
     public boolean onSale(final Item item) {
         throw new UnsupportedOperationException("Not yet implemented");
@@ -24,6 +28,8 @@ public class MarketingTemplate implements MarketingInfo {
     public Season season(final LocalDate when) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
+
+
     
     
 
