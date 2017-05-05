@@ -290,7 +290,66 @@ public class InventoryTest {
     	assertEquals(actual.get(1).quantity, shouldHaveItem2 - onHandItem2);
     }
     
-    
+    @Test
+    public void twoItemsOneOnSaleOnlyNonSaleNeedsStock()
+    {
+    	//given
+    	final int shouldHaveItem1 = 15;
+    	int onHandItem2 = 13;
+    	final int shouldHaveItem2 = 20;
+    	Item item1OnSale = new StockedItem(shouldHaveItem1);
+    	Item item2 = new StockedItem(shouldHaveItem2);
+    	MarketingTemplate mt = new MarketingTemplate()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        if (item.equals(item1OnSale))
+    	        	return true;
+    	        else
+    	        	return false;
+    	    }
+    	};
+    	final int saleBuffer = mt.saleBuffer();
+    	int onHandItem1 = shouldHaveItem1 + saleBuffer; //is it okay for these assignments to be out of order? Is this ugly?
+    	
+    	final InventoryDatabase db = new DatabaseTemplate() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onHandItem1;
+    			}
+    			else if (item.equals(item2))
+    			{
+    				return onHandItem2;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1OnSale);
+    			myList.add(item2);
+    			return myList;
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(1, actual.size());// should have orders
+    	assertEquals(actual.get(0).quantity, shouldHaveItem2 - onHandItem2);
+    	
+    }
     
 
 }
