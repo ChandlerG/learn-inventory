@@ -11,4 +11,5 @@ public interface Item {
 	
 	public Season season();
 	
+	public boolean isFirstOrderableOnly();
 }

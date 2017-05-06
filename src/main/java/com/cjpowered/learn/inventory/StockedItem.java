@@ -6,8 +6,9 @@ public class StockedItem implements Item {
 	
 	
 	private final int shouldHave;
-	private final Season season;
+	private  Season season;//finals??
 	private final boolean isSeasonal;
+	private  boolean isFirst;
 	
 	public StockedItem(int wantOnHand)
 	{
@@ -22,8 +23,24 @@ public class StockedItem implements Item {
 		this.shouldHave = wantOnHand;
 		this.season = season;
 		this.isSeasonal = true;
-		
 	}
+	
+	public StockedItem(int wantOnHand, Season season, boolean isFirst)
+	{
+		this.shouldHave = wantOnHand;
+		this.season = season;
+		this.isSeasonal = true;
+		this.isFirst = isFirst;
+	}
+	
+	public StockedItem(int wantOnHand, boolean isFirst)
+	{
+		this.shouldHave = wantOnHand;
+		this.season = Season.Fall;
+		this.isSeasonal = false;
+		this.isFirst = isFirst;
+	}
+	
 	
 	@Override
 	public int wantOnHand()
@@ -39,6 +56,11 @@ public class StockedItem implements Item {
 	public Season season()
 	{
 		return season;
+	}
+	
+	public boolean isFirstOrderableOnly()
+	{
+		return isFirst;
 	}
 	
 	

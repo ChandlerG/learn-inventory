@@ -694,4 +694,76 @@ public class InventoryTest {
     	assertEquals(Math.max(mt.saleAmount(shouldHaveItem1), mt.seasonalAmount(shouldHaveItem1)) - onHandItem1, actual.get(0).quantity);
     	
     }
+    
+    @Test
+    public void notFirstDayDontOrder()
+    {
+    	//given
+    	
+    	final int shouldHaveItem1 = 15;
+    	Season item1Season = Season.Winter;
+    	boolean firstMonth = true;
+    	
+    	int onHandItem2 = 20;
+    	final int shouldHaveItem2 = 20;
+    	
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season, firstMonth);
+    	Item item2 = new StockedItem(shouldHaveItem2);
+    	MarketingTemplate mt = new MarketingTemplate()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        if (item.equals(item1Seasonal))
+    	        {
+    	        	return true;
+    	        }
+    	        return false;
+    	    }
+    	    @Override
+    	    public Season season(final LocalDate when)
+    	    {
+    	    	return item1Season;
+    	    }
+    	};
+    	int onHandItem1 = mt.seasonalAmount(shouldHaveItem1);
+    	
+    	
+    	
+    	final InventoryDatabase db = new DatabaseTemplate() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1Seasonal))
+    			{
+    				return onHandItem1;
+    			}
+    			else if (item.equals(item2))
+    			{
+    				return onHandItem2;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1Seasonal);
+    			myList.add(item2);
+    			return myList;
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	assertEquals(0, actual.size());// should have 0 orders
+    	
+    	
+    }
 }
