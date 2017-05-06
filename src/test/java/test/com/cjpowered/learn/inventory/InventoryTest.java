@@ -58,6 +58,9 @@ public class InventoryTest {
 
     }
     
+    /**
+     * One item, neither seasonal nor sale, needs stock
+     */
     @Test
     public void orderEnoughStock()
     {
@@ -104,7 +107,9 @@ public class InventoryTest {
     }
     
     
-    //test onHand is greater than should have;
+    /**
+     * One item, neither seasonal nor on sale, we have more than we need
+     */
     @Test
     public void tooMuchOnHand()
     {
@@ -149,6 +154,9 @@ public class InventoryTest {
     	
     }
     
+    /**
+     * One item, neither seasonal nor on sale, and our stock levels are _exactly_ correct
+     */
     @Test
     public void justTheRightAmountOnHand()
     {
@@ -192,6 +200,9 @@ public class InventoryTest {
     }
     
     
+    /**
+     * Two items, neither seasonal nor on sale, one needs stock, one is exactly correct
+     */
     @Test
     public void twoItemsOneNeedsStockOneIsJustRight()
     {
@@ -255,6 +266,9 @@ public class InventoryTest {
     }
     
     
+    /**
+     * Two items, both need stock, one on sale
+     */
     @Test
     public void twoItemsOneOnSaleBothNeedStock()
     {
@@ -326,6 +340,9 @@ public class InventoryTest {
     //before changing the number values? How would this fail?
     //and how comprehensive do my tests need to be? Should I exhaust _every_ possibility for two items 
     //in relation to 1 being in stock, 1 being on sale, etc?? That's quite a few possibilities
+    /**
+     * Two items, one on sale, sale item is fully stocked, non sale item needs stock
+     */
     @Test
     public void twoItemsOneOnSaleOnlyNonSaleNeedsStock()
     {
@@ -394,7 +411,8 @@ public class InventoryTest {
  
   
     /**
-     * The seasonal item needs stock, but also needs to order above the regular should have because it's seasonal
+     * The seasonal item needs stock, but also needs to order above the regular should have because it's seasonal,
+     * one item just needs regular stock ordered
      * 
      */
     @Test
@@ -462,4 +480,148 @@ public class InventoryTest {
     	assertEquals(shouldHaveItem1*2 - onHandItem1,actual.get(0).quantity);
     	assertEquals(shouldHaveItem2 - onHandItem2, actual.get(1).quantity);
     }
+    
+    /**
+     * Two items, the seasonal one is at regular stock levels, but needs to meet
+     * seasonal stock levels
+     * 
+     */
+    @Test
+    public void twoItemsSeasonalNeedsStock()
+    {
+    	//given
+    	int onHandItem1 = 15; 
+    	final int shouldHaveItem1 = 15;
+    	Season item1Season = Season.Winter;
+    	
+    	int onHandItem2 = 13;
+    	final int shouldHaveItem2 = 20;
+    	
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2);
+    	MarketingTemplate mt = new MarketingTemplate()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	    @Override
+    	    public Season season(final LocalDate when)
+    	    {
+    	    	return item1Season;
+    	    }
+    	};
+    	
+    	
+    	
+    	final InventoryDatabase db = new DatabaseTemplate() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1Seasonal))
+    			{
+    				return onHandItem1;
+    			}
+    			else if (item.equals(item2))
+    			{
+    				return onHandItem2;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1Seasonal);
+    			myList.add(item2);
+    			return myList;
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	assertEquals(2, actual.size());// should 2 have orders
+    	assertEquals(shouldHaveItem1*2 - onHandItem1,actual.get(0).quantity);
+    	assertEquals(shouldHaveItem2 - onHandItem2, actual.get(1).quantity);
+    }
+
+
+    /**
+     * Two items, Neither Needs Stock, One is seasonal
+     * 
+     */
+    @Test
+    public void twoItemsOneSeasonalNeitherNeedsStock()
+    {
+    	//given
+    	
+    	final int shouldHaveItem1 = 15;
+    	Season item1Season = Season.Winter;
+    	
+    	int onHandItem2 = 20;
+    	final int shouldHaveItem2 = 20;
+    	
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2);
+    	MarketingTemplate mt = new MarketingTemplate()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	    @Override
+    	    public Season season(final LocalDate when)
+    	    {
+    	    	return item1Season;
+    	    }
+    	};
+    	int onHandItem1 = mt.seasonalAmount(shouldHaveItem1);
+    	
+    	
+    	
+    	final InventoryDatabase db = new DatabaseTemplate() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1Seasonal))
+    			{
+    				return onHandItem1;
+    			}
+    			else if (item.equals(item2))
+    			{
+    				return onHandItem2;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1Seasonal);
+    			myList.add(item2);
+    			return myList;
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	assertEquals(0, actual.size());// should 2 have orders
+    	
+    }
+
+    
 }
