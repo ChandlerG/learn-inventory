@@ -41,6 +41,9 @@ if necessary.
 
 0. Clone this repo and get your development environment working. You will
 know it's all working when you can run the existing unit test suite.
+    - you'll need a Java 8 (aka JDK 1.8) SDK
+    - you'll probably want an IDE, http://eclipse.org has a good one, just the plain Java IDE is all you need
+    - you should have Maven, too: http://maven.apache.org .
 0. _Bonus: have travis-ci.org automatically build and test your clone_
     - sign up to travis-ci.org if you haven't already
     - activate your repository on the Travis-CI website
