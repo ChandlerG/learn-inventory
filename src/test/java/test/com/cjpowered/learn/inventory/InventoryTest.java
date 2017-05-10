@@ -756,7 +756,7 @@ public class InventoryTest {
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
-    	final LocalDate today = LocalDate.now();
+    	final LocalDate today = LocalDate.of(2017, 1, 2);
     	
     	//when 
     	final List<Order> actual = im.getOrders(today);
