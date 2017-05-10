@@ -13,6 +13,7 @@ import com.cjpowered.learn.inventory.InventoryDatabase;
 import com.cjpowered.learn.inventory.InventoryManager;
 import com.cjpowered.learn.inventory.Item;
 import com.cjpowered.learn.inventory.Order;
+import com.cjpowered.learn.inventory.SeasonalItem;
 import com.cjpowered.learn.inventory.StockedItem;
 import com.cjpowered.learn.inventory.ace.AceInventoryManager;
 import com.cjpowered.learn.marketing.Season;
@@ -62,7 +63,7 @@ public class InventoryTest {
      * One item, neither seasonal nor sale, needs stock
      */
     @Test
-    public void orderEnoughStock()
+    public void orderEnoughStockNotFirst()
     {
     	//given
     	int onHand = 10;
@@ -79,7 +80,7 @@ public class InventoryTest {
     	    }
     	};
     			
-    	Item item = new StockedItem(shouldHave);
+    	Item item = new StockedItem(shouldHave, false);
     	final InventoryDatabase db = new DatabaseTemplate() {
     		@Override
     		public int onHand(Item item) {
@@ -128,7 +129,7 @@ public class InventoryTest {
     	    }
     	};
     	
-    	Item item = new StockedItem(shouldHave);
+    	Item item = new StockedItem(shouldHave, false);
     	final InventoryDatabase db = new DatabaseTemplate() {
     		@Override
     		public int onHand(Item item)
@@ -175,7 +176,7 @@ public class InventoryTest {
     	    }
     	};
     	
-    	Item item = new StockedItem(shouldHave);
+    	Item item = new StockedItem(shouldHave, false);
     	final InventoryDatabase db = new DatabaseTemplate() {
     		@Override
     		public int onHand(Item item)
@@ -224,8 +225,8 @@ public class InventoryTest {
     	    }
     	};
     	
-    	Item item1 = new StockedItem(shouldHaveItem1);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1 = new StockedItem(shouldHaveItem1,  false);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	
     	
     	final InventoryDatabase db = new DatabaseTemplate() {
@@ -277,8 +278,10 @@ public class InventoryTest {
     	final int shouldHaveItem1 = 15;
     	int onHandItem2 = 13;
     	final int shouldHaveItem2 = 20;
-    	Item item1OnSale = new StockedItem(shouldHaveItem1);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
+    	
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -294,6 +297,8 @@ public class InventoryTest {
     	    	return Season.Fall;
     	    }
     	};
+    	
+    	
     	
     	final InventoryDatabase db = new DatabaseTemplate() {
     		@Override
@@ -350,8 +355,8 @@ public class InventoryTest {
     	final int shouldHaveItem1 = 15;
     	int onHandItem2 = 13;
     	final int shouldHaveItem2 = 20;
-    	Item item1OnSale = new StockedItem(shouldHaveItem1);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -426,8 +431,8 @@ public class InventoryTest {
     	int onHandItem2 = 13;
     	final int shouldHaveItem2 = 20;
     	
-    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -497,8 +502,8 @@ public class InventoryTest {
     	int onHandItem2 = 13;
     	final int shouldHaveItem2 = 20;
     	
-    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -568,8 +573,8 @@ public class InventoryTest {
     	int onHandItem2 = 20;
     	final int shouldHaveItem2 = 20;
     	
-    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -635,8 +640,8 @@ public class InventoryTest {
     	int onHandItem2 = 20;
     	final int shouldHaveItem2 = 20;
     	
-    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
@@ -707,8 +712,8 @@ public class InventoryTest {
     	int onHandItem2 = 20;
     	final int shouldHaveItem2 = 20;
     	
-    	Item item1Seasonal = new StockedItem(shouldHaveItem1, item1Season, firstMonth);
-    	Item item2 = new StockedItem(shouldHaveItem2);
+    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, true, item1Season);
+    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
