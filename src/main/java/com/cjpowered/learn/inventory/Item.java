@@ -8,9 +8,9 @@ import com.cjpowered.learn.marketing.Season;
 public interface Item {
 
 	
-	public int wantOnHand(LocalDate today, MarketingInfo mi);
+	public int toOrder(LocalDate today, MarketingInfo mi, int onHandAndOnOrder);
 	
 
-
+	public int getNormalStock();
 
 }

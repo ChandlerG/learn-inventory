@@ -12,9 +12,20 @@ public class DatabaseTemplate implements InventoryDatabase {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
+	public void setRequiredOnHand(Item i, int in)
+	{
+		
+	}
+	
     @Override
     public List<Item> stockItems() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
+
+	@Override
+	public int onOrder(Item item) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
 }

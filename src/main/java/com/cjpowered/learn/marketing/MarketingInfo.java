@@ -25,9 +25,5 @@ public interface MarketingInfo {
      */
     Season season(LocalDate when);
 
-    
-	public int saleAmount(int onHand);
-
-	public int seasonalAmount(int onHand);
 	
 }

@@ -5,18 +5,26 @@ import static org.junit.Assert.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
 import com.cjpowered.learn.inventory.InventoryDatabase;
 import com.cjpowered.learn.inventory.InventoryManager;
+import com.cjpowered.learn.inventory.InventoryNeeded;
 import com.cjpowered.learn.inventory.Item;
 import com.cjpowered.learn.inventory.Order;
-import com.cjpowered.learn.inventory.SeasonalItem;
 import com.cjpowered.learn.inventory.StockedItem;
 import com.cjpowered.learn.inventory.ace.AceInventoryManager;
+import com.cjpowered.learn.marketing.MarketingInfo;
 import com.cjpowered.learn.marketing.Season;
+
+import static org.mockito.Mockito.*;
+
+import StockCalcs.SaleCalc;
+import StockCalcs.SeasonalCalc;
 
 /*
  * We need to keep items in stock to prevent back orders. See the README.md
@@ -25,23 +33,15 @@ import com.cjpowered.learn.marketing.Season;
  */
 
 public class InventoryTest {
+	
+	private final int saleAmount = 20;
 
     @Test
     public void whenNoStockItemsDoNotOrder() {
         // given
         final LocalDate today = LocalDate.now();
-        MarketingTemplate mt = new MarketingTemplate(){
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
-    	    }
-    	};
-        final InventoryDatabase db = new DatabaseTemplate(){
+        MarketingTemplate mt = new MarketingTemplate();
+        final InventoryDatabase db = new FakeDatabase(){
         	@Override
         	public List<Item> stockItems()
         	{
@@ -60,7 +60,7 @@ public class InventoryTest {
     }
     
     /**
-     * One item, neither seasonal nor sale, needs stock
+     * One item no specialness needs stock
      */
     @Test
     public void orderEnoughStockNotFirst()
@@ -68,20 +68,16 @@ public class InventoryTest {
     	//given
     	int onHand = 10;
     	final int shouldHave = 16;
+    	int onOrder = 2;
     	MarketingTemplate mt = new MarketingTemplate(){
     	    @Override
     	    public boolean onSale(final Item item) {
     	        return false;
     	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
-    	    }
     	};
-    			
-    	Item item = new StockedItem(shouldHave, false);
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	Set<InventoryNeeded> myList = new HashSet();	
+    	Item item = new StockedItem(shouldHave, false, 1,  myList);
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item) {
     			return onHand;
@@ -91,6 +87,11 @@ public class InventoryTest {
     		public List<Item> stockItems() {
     			return Collections.singletonList(item);
     			
+    		}
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			return onOrder;
     		}
     	};
     	
@@ -103,13 +104,13 @@ public class InventoryTest {
     	//then
     	assertEquals(1, actual.size());
     	assertEquals(item, actual.get(0).item);
-    	assertEquals(shouldHave - onHand,actual.get(0).quantity);    	
+    	assertEquals(shouldHave - onHand - onOrder,actual.get(0).quantity);    	
     	
     }
     
     
     /**
-     * One item, neither seasonal nor on sale, we have more than we need
+     * One item, no specialness, we have more than we need onHand
      */
     @Test
     public void tooMuchOnHand()
@@ -117,6 +118,7 @@ public class InventoryTest {
     	//given
     	int onHand = 20;
     	final int shouldHave = 14;
+    	int onOrder = 0;
     	MarketingTemplate mt = new MarketingTemplate(){
     	    @Override
     	    public boolean onSale(final Item item) {
@@ -129,8 +131,9 @@ public class InventoryTest {
     	    }
     	};
     	
-    	Item item = new StockedItem(shouldHave, false);
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	Item item = new StockedItem(shouldHave, false, 1, mySet);
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
@@ -141,6 +144,62 @@ public class InventoryTest {
     		{
     			return Collections.singletonList(item);
     		}
+    		
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(0, actual.size());
+    	
+    }
+    
+    
+    /**
+     * One item, no specialness, we have more than we need onOrder
+     */
+    @Test
+    public void tooMuchOnOrder()
+    {
+    	//given
+    	int onHand = 1;
+    	final int shouldHave = 14;
+    	int onOrder = 20;
+    	MarketingTemplate mt = new MarketingTemplate(){
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        return false;
+    	    }
+    	    @Override 
+    	    public Season season(final LocalDate when)
+    	    {
+    	    	return Season.Fall;
+    	    }
+    	};
+    	
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	Item item = new StockedItem(shouldHave, false, 1, mySet);
+    	final InventoryDatabase db = new FakeDatabase() {
+    		@Override
+    		public int onOrder(Item item)
+    		{
+    			return onOrder;
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			return Collections.singletonList(item);
+    		}
+    		public int onHand(Item item)
+    		{
+    			return onHand;
+    		}
+    		
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
     	
@@ -156,32 +215,70 @@ public class InventoryTest {
     }
     
     /**
-     * One item, neither seasonal nor on sale, and our stock levels are _exactly_ correct
+     * One item, no specialness and our stock levels are _exactly_ correct between onHand and OnOrder
      */
     @Test
     public void justTheRightAmountOnHand()
     {
     	//given
-    	int onHand = 14;
+    	int onHand = 10;
+    	int onOrder = 4;
     	final int shouldHave = 14;
-    	MarketingTemplate mt = new MarketingTemplate(){
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
-    	    }
-    	};
-    	
-    	Item item = new StockedItem(shouldHave, false);
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	MarketingInfo mt = new FakeMarketing();
+    	Set<InventoryNeeded> iSet= new HashSet();
+    	Item item = new StockedItem(shouldHave, false, 1, iSet);
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
     			return onHand;
+    		}
+    		@Override
+    		public int onOrder(Item item)
+    		{
+    			return onOrder;
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			return Collections.singletonList(item);
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(0, actual.size());
+    }
+    
+    
+    /**
+     * One item, no specialness and our stock levels are at 80%, don't order correct between onHand and OnOrder
+     */
+    @Test
+    public void stockAt80DoNotOrder()
+    {
+    	//given
+    	int onHand = 70;
+    	int onOrder = 10;
+    	final int shouldHave = 100;
+    	MarketingInfo mt = new FakeMarketing();
+    	Set<InventoryNeeded> iSet= new HashSet();
+    	Item item = new StockedItem(shouldHave, false, 1, iSet);
+    	final InventoryDatabase db = new FakeDatabase() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			return onHand;
+    		}
+    		@Override
+    		public int onOrder(Item item)
+    		{
+    			return onOrder;
     		}
     		@Override
     		public List<Item> stockItems()
@@ -211,25 +308,16 @@ public class InventoryTest {
     	int onHandItem1 = 14;
     	final int shouldHaveItem1 = 14;
     	
-    	int onHandItem2 = 13;
-    	final int shouldHaveItem2 = 20;
-    	MarketingTemplate mt = new MarketingTemplate(){
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
-    	    }
-    	};
+    	int onHandItem2 = 10;
+    	 int shouldHaveItem2 = 20;
+    	MarketingInfo mt = new FakeMarketing();
     	
-    	Item item1 = new StockedItem(shouldHaveItem1,  false);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	Item item1 = new StockedItem(shouldHaveItem1,  false, 1, mySet);
+    	Item item2 = new StockedItem(shouldHaveItem2, false, 1, mySet);
     	
     	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
@@ -264,25 +352,28 @@ public class InventoryTest {
     	//then
     	
     	assertEquals(1, actual.size());
+    	assertEquals(actual.get(0).quantity,shouldHaveItem2 - onHandItem2);
+    	
     }
     
     
     /**
-     * Two items, both need stock, one on sale
+     * item needs more stock because it's on sale
      */
     @Test
-    public void twoItemsOneOnSaleBothNeedStock()
+    public void saleItem()
     {
     	//given
     	int onHandItem1 = 14;
     	final int shouldHaveItem1 = 15;
-    	int onHandItem2 = 13;
-    	final int shouldHaveItem2 = 20;
+    	final int onOrderItem1 = 1;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SaleCalc());
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false, 1, mySet);
     	
-    	Item item1OnSale = new StockedItem(shouldHaveItem1, false);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
     	
-    	MarketingTemplate mt = new MarketingTemplate()
+    	
+    	MarketingInfo mt = new FakeMarketing()
     	{
     	    @Override
     	    public boolean onSale(final Item item) {
@@ -291,26 +382,15 @@ public class InventoryTest {
     	        else
     	        	return false;
     	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
-    	    }
     	};
-    	
-    	
-    	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
     			if (item.equals(item1OnSale))
     			{
     				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
     			}
     			else
     			{
@@ -322,8 +402,19 @@ public class InventoryTest {
     		{
     			List<Item> myList = new ArrayList<>();
     			myList.add(item1OnSale);
-    			myList.add(item2);
     			return myList;
+    		}
+    		
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onOrderItem1;
+    			}
+    			else
+    				return 0;
+    			
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
@@ -334,30 +425,28 @@ public class InventoryTest {
     	
     	//then
     	
-    	assertEquals(2, actual.size());//both should have orders
-    	assertEquals(mt.saleAmount(shouldHaveItem1) - onHandItem1, actual.get(0).quantity);//Iterator okay?? Do I need to specify more?
-    	assertEquals(actual.get(1).quantity, shouldHaveItem2 - onHandItem2);
+    	assertEquals(1, actual.size());
+    	assertEquals(saleAmount + shouldHaveItem1 - onHandItem1 - onOrderItem1, actual.get(0).quantity);
     }
     
     
-    
-    //this test passed without a red, just from changing the amount of stock. Should I... write the test
-    //before changing the number values? How would this fail?
-    //and how comprehensive do my tests need to be? Should I exhaust _every_ possibility for two items 
-    //in relation to 1 being in stock, 1 being on sale, etc?? That's quite a few possibilities
     /**
-     * Two items, one on sale, sale item is fully stocked, non sale item needs stock
+     * item doesn't need stock, at 80% of saleLevel
      */
     @Test
-    public void twoItemsOneOnSaleOnlyNonSaleNeedsStock()
+    public void saleItemNoStock()
     {
     	//given
-    	final int shouldHaveItem1 = 15;
-    	int onHandItem2 = 13;
-    	final int shouldHaveItem2 = 20;
-    	Item item1OnSale = new StockedItem(shouldHaveItem1, false);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
-    	MarketingTemplate mt = new MarketingTemplate()
+    	int onHandItem1 = 70;
+    	final int shouldHaveItem1 = 80;
+    	final int onOrderItem1 = 10;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SaleCalc());
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false, 1, mySet);
+    	
+    	
+    	
+    	MarketingInfo mt = new FakeMarketing()
     	{
     	    @Override
     	    public boolean onSale(final Item item) {
@@ -366,16 +455,89 @@ public class InventoryTest {
     	        else
     	        	return false;
     	    }
-    	    @Override 
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return Season.Fall;
+    	};
+
+    	final InventoryDatabase db = new FakeDatabase() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onHandItem1;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1OnSale);
+    			return myList;
+    		}
+    		
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onOrderItem1;
+    			}
+    			else
+    				return 0;
+    			
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(0, actual.size());
+    }
+    
+    
+    /**
+     * Two items, one on sale, sale item is fully stocked, non sale item needs stock
+     */
+    @Test
+    public void twoItemsOneOnSaleOnlyNonSaleNeedsStock()
+    {
+    	//given
+    	
+    	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = shouldHaveItem1 + saleAmount;
+    	
+    	
+    	final int onHandItem2 = 6;
+    	final int onOrderItem2 = 4;
+    	final int shouldHaveItem2 = 20;
+    	
+    	
+    	Set <InventoryNeeded> eSet = new HashSet();
+    	Set <InventoryNeeded> mSet = new HashSet();
+    	mSet.add(new SaleCalc());
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false, 1, mSet);
+    	Item item2 = new StockedItem(shouldHaveItem2, false, 1, eSet);
+    	MarketingInfo mt = new FakeMarketing()
+    	{
+    	    @Override
+    	    public boolean onSale(final Item item) {
+    	        if (item.equals(item1OnSale))
+    	        	return true;
+    	        else
+    	        	return false;
     	    }
     	};
     	
-    	int onHandItem1 = mt.saleAmount(15); //is it okay for these assignments to be out of order? Is this ugly?
     	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
@@ -399,6 +561,17 @@ public class InventoryTest {
     			myList.add(item1OnSale);
     			myList.add(item2);
     			return myList;
+    		}
+    		
+    		@Override
+    		public int onOrder(Item item)
+    		{
+    			if (item.equals(item2))
+    			{
+    				return onOrderItem2;
+    			}
+    			else
+    				return 1;
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
@@ -410,55 +583,101 @@ public class InventoryTest {
     	//then
     	
     	assertEquals(1, actual.size());// should have orders
-    	assertEquals(actual.get(0).quantity, shouldHaveItem2 - onHandItem2);
+    	assertEquals(actual.get(0).quantity, shouldHaveItem2 - onHandItem2 - onOrderItem2);
     	
     }
  
+    
+    /**
+     * item needs more stock because it's seasonal
+     */
+    @Test
+    public void seasonalItem()
+    {
+    	//given
+    	int onHandItem1 = 14;
+    	final int shouldHaveItem1 = 15;
+    	final int onOrderItem1 = 1;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SeasonalCalc(Season.Fall));
+    	Item item1OnSale = new StockedItem(shouldHaveItem1, false, 1, mySet);
+
+    	
+    	MarketingInfo mt = new FakeMarketing();
+
+    	final InventoryDatabase db = new FakeDatabase() {
+    		@Override
+    		public int onHand(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onHandItem1;
+    			}
+    			else
+    			{
+    				return 0;
+    			}
+    		}
+    		@Override
+    		public List<Item> stockItems()
+    		{
+    			List<Item> myList = new ArrayList<>();
+    			myList.add(item1OnSale);
+    			return myList;
+    		}
+    		
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			if (item.equals(item1OnSale))
+    			{
+    				return onOrderItem1;
+    			}
+    			else
+    				return 0;
+    			
+    		}
+    	};
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today = LocalDate.now();
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	
+    	assertEquals(1, actual.size());
+    	assertEquals( shouldHaveItem1*2 - onHandItem1 - onOrderItem1, actual.get(0).quantity);
+    }
   
     /**
-     * The seasonal item needs stock, but also needs to order above the regular should have because it's seasonal,
-     * one item just needs regular stock ordered
+     * SeasonalItem not in season so order regular amount
      * 
      */
     @Test
-    public void twoItemsBothNeedStockOneSeasonal()
+    public void seasonalItemNotInSeason()
     {
     	//given
-    	int onHandItem1 = 13; 
-    	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = 5; 
+    	final int shouldHaveItem1 = 20;
     	Season item1Season = Season.Winter;
-    	
-    	int onHandItem2 = 13;
-    	final int shouldHaveItem2 = 20;
-    	
-    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
-    	MarketingTemplate mt = new MarketingTemplate()
-    	{
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
-    	    @Override
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return item1Season;
-    	    }
-    	};
+    	int onOrderItem1 = 5;
+    
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SeasonalCalc(item1Season));
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, false, 1, mySet);
+
+    	MarketingInfo mt = new FakeMarketing();
     	
     	
     	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
     			if (item.equals(item1Seasonal))
     			{
     				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
     			}
     			else
     			{
@@ -470,8 +689,17 @@ public class InventoryTest {
     		{
     			List<Item> myList = new ArrayList<>();
     			myList.add(item1Seasonal);
-    			myList.add(item2);
     			return myList;
+    		}
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			if (item.equals(item1Seasonal))
+    			{
+    				return onOrderItem1;
+    			}
+    			else
+    				return 0;
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
@@ -481,35 +709,30 @@ public class InventoryTest {
     	final List<Order> actual = im.getOrders(today);
     	
     	//then
-    	assertEquals(2, actual.size());// should 2 have orders
-    	assertEquals(shouldHaveItem1*2 - onHandItem1,actual.get(0).quantity);
-    	assertEquals(shouldHaveItem2 - onHandItem2, actual.get(1).quantity);
+    	assertEquals(1, actual.size());// should 2 have orders
+    	assertEquals(shouldHaveItem1 - onHandItem1 - onOrderItem1,actual.get(0).quantity);
+    	
     }
     
     /**
-     * Two items, the seasonal one is at regular stock levels, but needs to meet
-     * seasonal stock levels
+     * Item meets normal stock, needs Seasonal
      * 
      */
     @Test
-    public void twoItemsSeasonalNeedsStock()
+    public void needsSeasonalStock()
     {
     	//given
     	int onHandItem1 = 15; 
     	final int shouldHaveItem1 = 15;
     	Season item1Season = Season.Winter;
+    	int onOrderItem1 = 5;
     	
-    	int onHandItem2 = 13;
-    	final int shouldHaveItem2 = 20;
-    	
-    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
-    	MarketingTemplate mt = new MarketingTemplate()
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SeasonalCalc(item1Season));
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, false, 1, mySet);
+
+    	MarketingInfo mt = new FakeMarketing()
     	{
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
     	    @Override
     	    public Season season(final LocalDate when)
     	    {
@@ -519,17 +742,13 @@ public class InventoryTest {
     	
     	
     	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
     			if (item.equals(item1Seasonal))
     			{
     				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
     			}
     			else
     			{
@@ -541,8 +760,12 @@ public class InventoryTest {
     		{
     			List<Item> myList = new ArrayList<>();
     			myList.add(item1Seasonal);
-    			myList.add(item2);
     			return myList;
+    		}
+    		@Override
+    		public int onOrder(Item item)
+    		{
+    				return onOrderItem1;
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
@@ -552,82 +775,13 @@ public class InventoryTest {
     	final List<Order> actual = im.getOrders(today);
     	
     	//then
-    	assertEquals(2, actual.size());// should 2 have orders
-    	assertEquals(shouldHaveItem1*2 - onHandItem1,actual.get(0).quantity);
-    	assertEquals(shouldHaveItem2 - onHandItem2, actual.get(1).quantity);
+    	assertEquals(1, actual.size());// should 2 have orders
+    	assertEquals(shouldHaveItem1*2 - onHandItem1-onOrderItem1,actual.get(0).quantity);
+
     }
 
 
-    /**
-     * Two items, Neither Needs Stock, One is seasonal
-     * 
-     */
-    @Test
-    public void twoItemsOneSeasonalNeitherNeedsStock()
-    {
-    	//given
-    	
-    	final int shouldHaveItem1 = 15;
-    	Season item1Season = Season.Winter;
-    	
-    	int onHandItem2 = 20;
-    	final int shouldHaveItem2 = 20;
-    	
-    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
-    	MarketingTemplate mt = new MarketingTemplate()
-    	{
-    	    @Override
-    	    public boolean onSale(final Item item) {
-    	        return false;
-    	    }
-    	    @Override
-    	    public Season season(final LocalDate when)
-    	    {
-    	    	return item1Season;
-    	    }
-    	};
-    	int onHandItem1 = mt.seasonalAmount(shouldHaveItem1);
-    	
-    	
-    	
-    	final InventoryDatabase db = new DatabaseTemplate() {
-    		@Override
-    		public int onHand(Item item)
-    		{
-    			if (item.equals(item1Seasonal))
-    			{
-    				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
-    			}
-    			else
-    			{
-    				return 0;
-    			}
-    		}
-    		@Override
-    		public List<Item> stockItems()
-    		{
-    			List<Item> myList = new ArrayList<>();
-    			myList.add(item1Seasonal);
-    			myList.add(item2);
-    			return myList;
-    		}
-    	};
-    	final InventoryManager im = new AceInventoryManager(db, mt);
-    	final LocalDate today = LocalDate.now();
-    	
-    	//when 
-    	final List<Order> actual = im.getOrders(today);
-    	
-    	//then
-    	assertEquals(0, actual.size());// should 2 have orders
-    	
-    }
-
+ 
     //write two tests for an item on sale AND seasonal, make sure it always picks the largest 
     @Test
     public void itemOnSaleAndSeasonal()
@@ -635,57 +789,46 @@ public class InventoryTest {
     	//given
     	
     	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = 5;
     	Season item1Season = Season.Winter;
-    	
-    	int onHandItem2 = 20;
-    	final int shouldHaveItem2 = 20;
-    	
-    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, false, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
+    	final int onOrderItem1 = 3;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SaleCalc());
+    	mySet.add(new SeasonalCalc(item1Season));
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, false, 1, mySet);
+
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
     	    public boolean onSale(final Item item) {
-    	        if (item.equals(item1Seasonal))
-    	        {
     	        	return true;
-    	        }
-    	        return false;
     	    }
     	    @Override
     	    public Season season(final LocalDate when)
     	    {
     	    	return item1Season;
     	    }
+    	    
     	};
-    	int onHandItem1 = mt.seasonalAmount(shouldHaveItem1);
+
     	
-    	
-    	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
-    			if (item.equals(item1Seasonal))
-    			{
     				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
-    			}
-    			else
-    			{
-    				return 0;
-    			}
     		}
     		@Override
     		public List<Item> stockItems()
     		{
     			List<Item> myList = new ArrayList<>();
     			myList.add(item1Seasonal);
-    			myList.add(item2);
     			return myList;
+    		}
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			return onOrderItem1;
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
@@ -696,79 +839,133 @@ public class InventoryTest {
     	
     	//then
     	assertEquals(1, actual.size());// should have 1 orders
-    	assertEquals(Math.max(mt.saleAmount(shouldHaveItem1), mt.seasonalAmount(shouldHaveItem1)) - onHandItem1, actual.get(0).quantity);
+    	assertEquals(Math.max(shouldHaveItem1 + 20, shouldHaveItem1 * 2) - onHandItem1 - onOrderItem1, actual.get(0).quantity);
     	
     }
     
+    //Happy Path for first month only ordering
     @Test
-    public void notFirstDayDontOrder()
+    public void firstMonth()
     {
     	//given
     	
     	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = 5;
     	Season item1Season = Season.Winter;
-    	boolean firstMonth = true;
-    	
-    	int onHandItem2 = 20;
-    	final int shouldHaveItem2 = 20;
-    	
-    	Item item1Seasonal = new SeasonalItem(shouldHaveItem1, true, item1Season);
-    	Item item2 = new StockedItem(shouldHaveItem2, false);
+    	final int onOrderItem1 = 3;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	mySet.add(new SaleCalc());
+    	mySet.add(new SeasonalCalc(item1Season));
+    	Item item1Seasonal = new StockedItem(shouldHaveItem1, true, 1, mySet);
+
     	MarketingTemplate mt = new MarketingTemplate()
     	{
     	    @Override
     	    public boolean onSale(final Item item) {
-    	        if (item.equals(item1Seasonal))
-    	        {
     	        	return true;
-    	        }
-    	        return false;
     	    }
     	    @Override
     	    public Season season(final LocalDate when)
     	    {
     	    	return item1Season;
     	    }
+    	    
     	};
-    	int onHandItem1 = mt.seasonalAmount(shouldHaveItem1);
+
     	
-    	
-    	
-    	final InventoryDatabase db = new DatabaseTemplate() {
+    	final InventoryDatabase db = new FakeDatabase() {
     		@Override
     		public int onHand(Item item)
     		{
-    			if (item.equals(item1Seasonal))
-    			{
     				return onHandItem1;
-    			}
-    			else if (item.equals(item2))
-    			{
-    				return onHandItem2;
-    			}
-    			else
-    			{
-    				return 0;
-    			}
     		}
     		@Override
     		public List<Item> stockItems()
     		{
     			List<Item> myList = new ArrayList<>();
     			myList.add(item1Seasonal);
-    			myList.add(item2);
     			return myList;
+    		}
+    		@Override 
+    		public int onOrder(Item item)
+    		{
+    			return onOrderItem1;
     		}
     	};
     	final InventoryManager im = new AceInventoryManager(db, mt);
-    	final LocalDate today = LocalDate.of(2017, 1, 2);
+    	final LocalDate today =  LocalDate.of(2016, 2, 2);
     	
     	//when 
     	final List<Order> actual = im.getOrders(today);
     	
     	//then
-    	assertEquals(0, actual.size());// should have 0 orders
-    	
-    	
+    	assertEquals(0, actual.size());    	
     }
+    
+    
+    @Test
+    public void setStockHigherWhenEmpty()
+    {
+    	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = 0;
+    	final int onOrderItem1 = 0;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	Item item1 = new StockedItem(shouldHaveItem1, true, 1, mySet);
+
+    	MarketingInfo mt = new FakeMarketing();
+
+    	final InventoryDatabase db = mock(InventoryDatabase.class);
+    	when(db.onHand(item1)).thenReturn(onHandItem1);
+    	List<Item> myList = new ArrayList<>();
+		myList.add(item1);
+		when(db.stockItems()).thenReturn(myList);
+		when(db.onOrder(item1)).thenReturn(onOrderItem1);
+    	
+    
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today =  LocalDate.of(2016, 2, 2);
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	verify(db, times(1)).setRequiredOnHand(item1, (int)Math.ceil(item1.getNormalStock() * .10));
+    }
+    
+    
+    @Test
+    public void dontSetStockHigherOnOrder()
+    {
+    	final int shouldHaveItem1 = 15;
+    	int onHandItem1 = 0;
+    	final int onOrderItem1 = 3;
+    	Set<InventoryNeeded> mySet = new HashSet();
+    	Item item1 = new StockedItem(shouldHaveItem1, true, 1, mySet);
+
+    	MarketingInfo mt = new FakeMarketing();
+
+    	final InventoryDatabase db = mock(InventoryDatabase.class);
+    	when(db.onHand(item1)).thenReturn(onHandItem1);
+    	List<Item> myList = new ArrayList<>();
+		myList.add(item1);
+		when(db.stockItems()).thenReturn(myList);
+		when(db.onOrder(item1)).thenReturn(onOrderItem1);
+    	
+    
+    	final InventoryManager im = new AceInventoryManager(db, mt);
+    	final LocalDate today =  LocalDate.of(2016, 2, 2);
+    	
+    	//when 
+    	final List<Order> actual = im.getOrders(today);
+    	
+    	//then
+    	verify(db, never()).setRequiredOnHand(any(StockedItem.class), anyInt());
+    }
+    
+    
+    
+ 
+    
+    
+    
 }

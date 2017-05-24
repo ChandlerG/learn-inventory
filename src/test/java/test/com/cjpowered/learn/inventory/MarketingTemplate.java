@@ -8,17 +8,6 @@ import com.cjpowered.learn.marketing.Season;
 
 public class MarketingTemplate implements MarketingInfo {
 	
-	final private int saleBuffer = 20;
-	
-	public int saleAmount(int onHand)
-	{
-		return onHand + saleBuffer;
-	}
-
-	public int seasonalAmount(int onHand)
-	{
-		return onHand*2;//rule for seasons
-	}
     @Override
     public boolean onSale(final Item item) {
         throw new UnsupportedOperationException("Not yet implemented");
